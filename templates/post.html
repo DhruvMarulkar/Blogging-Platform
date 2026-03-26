@@ -3,15 +3,15 @@
   <article class="content-section py-3 px-4 mb-4">
     <div class="d-flex align-items-start gap-4">
       <img class="rounded-circle article-img flex-shrink-0"
-           src="{{ url_for('static', path='profile_pics/default.jpg') }}"
-           alt="{{ post.author }}'s profile picture"
+           src="{{ post.author.image_path }}"
+           alt="{{ post.author.username }}'s profile picture"
            width="64"
-           height="64"
+           height="64"  
            loading="lazy">
       <div class="flex-grow-1">
         <div class="article-metadata mb-2">
-          <a class="me-2" href="#">{{ post.author }}</a>
-          <small class="text-body-secondary">{{ post.date_posted }}</small>
+          <a class="me-2" href="#">{{ post.author.username }}</a>
+          <small class="text-body-secondary">{{ post.date_posted.strftime("%B %d %Y")}}</small>
         </div>
         <h2 class="article-title">{{ post.title }}</h2>
         <p class="article-content">{{ post.content }}</p>
