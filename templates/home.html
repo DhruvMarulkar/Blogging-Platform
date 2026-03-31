@@ -1,27 +1,21 @@
 {% extends "layout.html" %}
 {% block content %}
-  {% for post in posts %}
-    <article class="content-section py-3 px-4 mb-4">
-      <div class="d-flex align-items-start gap-4">
-        <img class="rounded-circle article-img flex-shrink-0"
-             src="{{ post.author.image_path }}"
-             alt="{{ post.author.username }}'s profile picture"
-             width="64"
-             height="64"
-             loading="lazy">
-        <div class="flex-grow-1">
-          <div class="article-metadata mb-2">
-            <a class="me-2"
-               href="{{ url_for("user_posts", user_id=post.author.id) }}">{{ post.author.username }}</a>
-            <small class="text-body-secondary">{{ post.date_posted.strftime("%B %d, %Y") }}</small>
-          </div>
-          <h2>
-            <a class="article-title"
-               href="{{ url_for("post_page", post_id=post.id) }}">{{ post.title }}</a>
-          </h2>
-          <p class="article-content">{{ post.content }}</p>
-        </div>
+{% for post in posts %}
+<article class="content-section py-3 px-4 mb-4">
+  <div class="d-flex align-items-start gap-4">
+    <img class="rounded-circle article-img flex-shrink-0" src="{{ post.author.image_path }}"
+      alt="{{ post.author.username }}'s profile picture" width="64" height="64" loading="lazy">
+    <div class="flex-grow-1">
+      <div class="article-metadata mb-2">
+        <a class="me-2" href="{{ url_for('user_posts', user_id=post.author.id) }}">{{ post.author.username }}</a>
+        <small class="text-body-secondary">{{ post.date_posted.strftime("%B %d, %Y") }}</small>
       </div>
-    </article>
-  {% endfor %}
+      <h2>
+        <a class="article-title" href="{{ url_for('post_page', post_id=post.id) }}">{{ post.title }}</a>
+      </h2>
+      <p class="article-content">{{ post.content }}</p>
+    </div>
+  </div>
+</article>
+{% endfor %}
 {% endblock content %}
