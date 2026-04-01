@@ -8,5 +8,8 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "fastapi[standard]>=0.135.1",
     "greenlet>=3.3.2",
+    "pwdlib[argon2]>=0.3.0",
+    "pydantic-settings>=2.13.1",
+    "pyjwt>=2.12.1",
     "sqlalchemy>=2.0.48",
 ]

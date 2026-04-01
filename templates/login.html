@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="content-section py-3 px-4 mb-4">
+    <h2 class="mb-4">Login</h2>
+    <form id="loginForm">
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="username" required>
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+    <p class="mt-3">
+        Don't have an account? <a href="{{ url_for('register_page') }}">Register here</a>
+    </p>
+</div>
+{% endblock content %}
+{% block scripts %}
+<script type="module">
+    import { getErrorMessage, showModal } from '/static/js/utils.js';
+
+    const loginForm = document.getElementById('loginForm');
+
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const formData = new FormData(loginForm);
+
+        try {
+            // OAuth2PasswordRequestForm expects form data, not JSON
+            const response = await fetch('/api/users/token', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Store token in localStorage
+                localStorage.setItem('access_token', data.access_token);
+
+                // Show success modal and redirect to home
+                document.getElementById('successMessage').textContent =
+                    'Login successful!';
+                showModal('successModal');
+
+                document.getElementById('successModal').addEventListener('hidden.bs.modal', () => {
+                    window.location.href = '/';
+                }, { once: true });
+            } else {
+                const error = await response.json();
+                document.getElementById('errorMessage').textContent = getErrorMessage(error);
+                showModal('errorModal');
+            }
+        } catch (error) {
+            document.getElementById('errorMessage').textContent =
+                'Network error. Please check your connection and try again.';
+            showModal('errorModal');
+        }
+    });
+</script>
+{% endblock scripts %}
