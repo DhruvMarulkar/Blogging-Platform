@@ -67,9 +67,10 @@
             <div id="loggedInNav" class="d-none">
               <button class="btn btn-outline-light mb-2 mb-md-0 me-md-2" type="button" data-bs-toggle="modal"
                 data-bs-target="#createPostModal">New Post</button>
-              <span id="usernameDisplay" class="navbar-text me-md-2"></span>
-              <button class="btn btn-outline-light mb-2 mb-md-0 me-md-3" type="button" id="logoutBtn">Logout</button>
+              <a class="btn btn-light mb-2 mb-md-0 me-md-3" href="{{ url_for('account_page') }}"
+                id="accountBtn">Account</a>
             </div>
+
             <!-- Shown when logged out -->
             <div id="loggedOutNav">
               <a class="btn btn-outline-light mb-2 mb-md-0 me-md-2" href="{{ url_for('login_page') }}">Login</a>
@@ -218,32 +219,30 @@
 
   <!-- Auth State Management -->
   <script type="module">
-    import { getCurrentUser, logout } from '/static/js/auth.js';
+    import { getCurrentUser } from '/static/js/auth.js';
 
-    // Update navbar based on auth state
     async function updateAuthUI() {
       const user = await getCurrentUser();
       const loggedInNav = document.getElementById('loggedInNav');
       const loggedOutNav = document.getElementById('loggedOutNav');
+      const accountBtn = document.getElementById('accountBtn');
 
       if (user) {
         loggedInNav.classList.remove('d-none');
         loggedInNav.classList.add('d-flex');
         loggedOutNav.classList.add('d-none');
-        document.getElementById('usernameDisplay').textContent = user.email;
+        accountBtn.textContent = user.username;
       } else {
         loggedInNav.classList.add('d-none');
         loggedInNav.classList.remove('d-flex');
         loggedOutNav.classList.remove('d-none');
+        accountBtn.textContent = 'Account';
       }
     }
 
-    // Logout handler
-    document.getElementById('logoutBtn').addEventListener('click', logout);
-
-    // Update UI on page load
     updateAuthUI();
   </script>
+
 
 
   <!-- Create Post Form Handler -->
@@ -253,6 +252,7 @@
       hideModal,
       showModal,
     } from "/static/js/utils.js";
+    import { getToken } from '/static/js/auth.js';
 
     const createForm = document.getElementById("createPostForm");
 
@@ -260,12 +260,17 @@
       // Stop default form submission - we'll handle it with JavaScript
       event.preventDefault();
 
+      const token = getToken();
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+
       // Gather form values into a plain object {title: "...", content: "..."}
       const formData = new FormData(createForm);
       const postData = Object.fromEntries(formData.entries());
 
       // TEMPORARY - hardcoded until authorization (Tutorial 11)
-      postData.user_id = 1;
 
       try {
         // POST to our API as JSON
@@ -273,9 +278,14 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify(postData),
         });
+        if (response.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
 
         if (response.ok) {
           const data = await response.json();

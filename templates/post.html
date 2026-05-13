@@ -11,15 +11,12 @@
       </div>
       <h2 class="article-title">{{ post.title }}</h2>
       <p class="article-content">{{ post.content }}</p>
-      <!-- Only show edit/delete options if user_id is 1 (TEMPORARY - until authentication) -->
-      {% if post.user_id == 1 %}
-      <div class="post-actions mt-3 pt-3 border-top">
+      <div id="postActions" class="post-actions mt-3 pt-3 border-top d-none">
         <button type="button" class="btn btn-outline-secondary me-1" data-bs-toggle="modal"
           data-bs-target="#editModal">Edit Post</button>
         <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete
           Post</button>
       </div>
-      {% endif %}
     </div>
   </div>
 </article>
@@ -73,95 +70,109 @@
 {% endblock content %}
 {% block scripts %}
 <script type="module">
-  import {
-    getErrorMessage,
-    hideModal,
-    showModal,
-  } from "/static/js/utils.js";
+  import { getCurrentUser, getToken } from '/static/js/auth.js';
+  import { getErrorMessage, showModal, hideModal } from '/static/js/utils.js';
 
-  // Get post ID from Jinja2 template
   const postId = "{{ post.id }}";
+  const postUserId = "{{ post.user_id }}";
+
+  // Show edit/delete buttons only if current user owns this post
+  async function checkOwnership() {
+    const user = await getCurrentUser();
+    if (user && user.id === postUserId) {
+      document.getElementById('postActions').classList.remove('d-none');
+    }
+  }
 
   // Edit Post Form Handler
-  const editForm = document.getElementById("editPostForm");
-  editForm.addEventListener("submit", async (event) => {
-    // Stop default form submission - we'll handle it with JavaScript
+  const editForm = document.getElementById('editPostForm');
+  editForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    // Gather form values into a plain object
+    const token = getToken();
+    if (!token) { window.location.href = '/login'; return; }
+
     const formData = new FormData(editForm);
     const postData = Object.fromEntries(formData.entries());
-
-    // Remove post_id from data (it's in the URL, not the body)
     delete postData.post_id;
 
     try {
-      // PATCH for partial update (just title and content, not user_id)
       const response = await fetch(`/api/posts/${postId}`, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(postData),
       });
 
+      if (response.status === 401) { window.location.href = '/login'; return; }
+      if (response.status === 403) {
+        document.getElementById('errorMessage').textContent =
+          'You are not authorized to edit this post.';
+        hideModal('editModal');
+        showModal('errorModal');
+        return;
+      }
+
       if (response.ok) {
-        document.getElementById("successMessage").textContent =
-          "Post updated successfully!";
+        document.getElementById('successMessage').textContent =
+          'Post updated successfully!';
+        hideModal('editModal');
+        showModal('successModal');
 
-        hideModal("editModal");
-        showModal("successModal");
-
-        document
-          .getElementById("successModal")
-          .addEventListener(
-            "hidden.bs.modal",
-            () => {
-              window.location.reload();
-            },
-            { once: true },
-          );
+        document.getElementById('successModal').addEventListener('hidden.bs.modal', () => {
+          window.location.reload();
+        }, { once: true });
       } else {
         const error = await response.json();
-        document.getElementById("errorMessage").textContent =
-          getErrorMessage(error);
-
-        hideModal("editModal");
-        showModal("errorModal");
+        document.getElementById('errorMessage').textContent = getErrorMessage(error);
+        hideModal('editModal');
+        showModal('errorModal');
       }
     } catch (error) {
-      document.getElementById("errorMessage").textContent =
-        "Network error. Please check your connection and try again.";
-      showModal("errorModal");
+      document.getElementById('errorMessage').textContent =
+        'Network error. Please check your connection and try again.';
+      showModal('errorModal');
     }
   });
 
-  // Delete Post Handler - listen for click on delete button
-  const deleteButton = document.getElementById("confirmDelete");
-  deleteButton.addEventListener("click", async () => {
+  // Delete Post Handler
+  const deleteButton = document.getElementById('confirmDelete');
+  deleteButton.addEventListener('click', async () => {
+    const token = getToken();
+    if (!token) { window.location.href = '/login'; return; }
+
     try {
-      // DELETE request - no body needed, post_id is in the URL
       const response = await fetch(`/api/posts/${postId}`, {
-        method: "DELETE",
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
       });
 
-      // 204 = No Content (success)
+      if (response.status === 401) { window.location.href = '/login'; return; }
+      if (response.status === 403) {
+        document.getElementById('errorMessage').textContent =
+          'You are not authorized to delete this post.';
+        hideModal('deleteModal');
+        showModal('errorModal');
+        return;
+      }
+
       if (response.status === 204) {
-        // Post is gone, redirect to home page
-        window.location.href = "/";
+        window.location.href = '/';
       } else {
         const error = await response.json();
-        document.getElementById("errorMessage").textContent =
-          getErrorMessage(error);
-
-        hideModal("deleteModal");
-        showModal("errorModal");
+        document.getElementById('errorMessage').textContent = getErrorMessage(error);
+        hideModal('deleteModal');
+        showModal('errorModal');
       }
     } catch (error) {
-      document.getElementById("errorMessage").textContent =
-        "Network error. Please check your connection and try again.";
-      showModal("errorModal");
+      document.getElementById('errorMessage').textContent =
+        'Network error. Please check your connection and try again.';
+      showModal('errorModal');
     }
   });
+
+  checkOwnership();
 </script>
 {% endblock scripts %}

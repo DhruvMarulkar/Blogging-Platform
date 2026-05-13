@@ -1,0 +1,240 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="content-section py-3 px-4 mb-4">
+    <h2 class="mb-4">Account Settings</h2>
+    <!-- Profile Info Section -->
+    <div class="d-flex align-items-center mb-4">
+        <img id="profileImage" class="rounded-circle me-3" src="/static/profile_pics/default.jpg" alt="Profile picture"
+            width="100" height="100">
+        <div>
+            <h5 id="displayUsername" class="mb-0"></h5>
+            <p id="displayEmail" class="text-body-secondary mb-0"></p>
+        </div>
+    </div>
+    <!-- Update Profile Form -->
+    <div class="mb-4">
+        <h5>Update Profile</h5>
+        <form id="updateProfileForm">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required minlength="1"
+                    maxlength="50">
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Profile</button>
+        </form>
+    </div>
+    <hr>
+    <!-- Profile Picture Section (Placeholder) -->
+    <div class="mb-4">
+        <h5>Profile Picture</h5>
+        <p class="text-body-secondary">File upload coming in a future tutorial.</p>
+        <input type="file" class="form-control" disabled>
+    </div>
+    <hr>
+    <!-- Password Reset Section (Placeholder) -->
+    <div class="mb-4">
+        <h5>Change Password</h5>
+        <p class="text-body-secondary">Password reset coming in a future tutorial.</p>
+        <form>
+            <div class="mb-3">
+                <label class="form-label">Current Password</label>
+                <input type="password" class="form-control" disabled>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">New Password</label>
+                <input type="password" class="form-control" disabled>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Confirm New Password</label>
+                <input type="password" class="form-control" disabled>
+            </div>
+            <button type="submit" class="btn btn-primary" disabled>Change Password</button>
+        </form>
+    </div>
+    <hr>
+    <!-- Logout Button -->
+    <div class="mb-4">
+        <button type="button" class="btn btn-light" id="logoutBtn">Logout</button>
+    </div>
+    <hr>
+    <!-- Danger Zone -->
+    <div class="mb-4">
+        <h5 class="text-danger">Danger Zone</h5>
+        <p class="text-body-secondary">
+            Once you delete your account, there is no going back. All your posts will also be deleted.
+        </p>
+        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
+            data-bs-target="#deleteAccountModal">Delete Account</button>
+    </div>
+</div>
+<!-- Delete Account Confirmation Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account?</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="fs-5">
+                    Are you sure you want to delete your account? This action cannot be undone. All your posts will be
+                    permanently deleted.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteAccount">Delete Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+{% block scripts %}
+<script type="module">
+    import { getCurrentUser, getToken, logout, clearUserCache } from '/static/js/auth.js';
+    import { getErrorMessage, showModal, hideModal } from '/static/js/utils.js';
+
+    let currentUserId = null;
+
+    // Load current user data and populate form
+    async function loadUserData() {
+        const user = await getCurrentUser();
+
+        // Redirect to login if not authenticated
+        if (!user) {
+            window.location.href = '/login';
+            return;
+        }
+
+        currentUserId = user.id;
+
+        // Populate display info
+        document.getElementById('displayUsername').textContent = user.username;
+        document.getElementById('displayEmail').textContent = user.email;
+        document.getElementById('profileImage').src = user.image_path;
+
+        // Populate form fields
+        document.getElementById('username').value = user.username;
+        document.getElementById('email').value = user.email;
+    }
+
+    // Update Profile Form Handler
+    const updateForm = document.getElementById('updateProfileForm');
+    updateForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const token = getToken();
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const formData = new FormData(updateForm);
+        const userData = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch(`/api/users/${currentUserId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(userData),
+            });
+
+            if (response.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+
+            if (response.status === 403) {
+                document.getElementById('errorMessage').textContent =
+                    'You are not authorized to update this profile.';
+                showModal('errorModal');
+                return;
+            }
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Clear cache so next getCurrentUser() fetches fresh data
+                clearUserCache();
+
+                // Update display
+                document.getElementById('displayUsername').textContent = data.username;
+                document.getElementById('displayEmail').textContent = data.email;
+
+                document.getElementById('successMessage').textContent =
+                    'Profile updated successfully!';
+                showModal('successModal');
+            } else {
+                const error = await response.json();
+                document.getElementById('errorMessage').textContent = getErrorMessage(error);
+                showModal('errorModal');
+            }
+        } catch (error) {
+            document.getElementById('errorMessage').textContent =
+                'Network error. Please check your connection and try again.';
+            showModal('errorModal');
+        }
+    });
+
+    // Logout Handler
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    // Delete Account Handler
+    document.getElementById('confirmDeleteAccount').addEventListener('click', async () => {
+        const token = getToken();
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/users/${currentUserId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (response.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+
+            if (response.status === 403) {
+                document.getElementById('errorMessage').textContent =
+                    'You are not authorized to delete this account.';
+                hideModal('deleteAccountModal');
+                showModal('errorModal');
+                return;
+            }
+
+            if (response.status === 204) {
+                // Account deleted successfully
+                localStorage.removeItem('access_token');
+                window.location.href = '/';
+            } else {
+                const error = await response.json();
+                document.getElementById('errorMessage').textContent = getErrorMessage(error);
+                hideModal('deleteAccountModal');
+                showModal('errorModal');
+            }
+        } catch (error) {
+            document.getElementById('errorMessage').textContent =
+                'Network error. Please check your connection and try again.';
+            showModal('errorModal');
+        }
+    });
+
+    // Load user data on page load
+    loadUserData();
+</script>
+{% endblock scripts %}
