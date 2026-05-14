@@ -73,8 +73,8 @@
   import { getCurrentUser, getToken } from '/static/js/auth.js';
   import { getErrorMessage, showModal, hideModal } from '/static/js/utils.js';
 
-  const postId = "{{ post.id }}";
-  const postUserId = "{{ post.user_id }}";
+  const postId = Number("{{ post['id'] }}");
+  const postUserId = Number("{{ post['user_id'] }}");
 
   // Show edit/delete buttons only if current user owns this post
   async function checkOwnership() {

@@ -28,12 +28,22 @@
         </form>
     </div>
     <hr>
-    <!-- Profile Picture Section (Placeholder) -->
+    <!-- Profile Picture Section -->
     <div class="mb-4">
         <h5>Profile Picture</h5>
-        <p class="text-body-secondary">File upload coming in a future tutorial.</p>
-        <input type="file" class="form-control" disabled>
+        <!-- Preview container -->
+        <div class="mb-3">
+            <img id="imagePreview" class="rounded-circle d-none object-fit-cover" alt="Image preview" width="150"
+                height="150">
+        </div>
+        <!-- File input and upload button -->
+        <div class="d-flex gap-2 align-items-start">
+            <input type="file" class="form-control file-input-sm" id="pictureInput" accept="image/*">
+            <button type="button" class="btn btn-primary" id="uploadPictureBtn" disabled>Upload</button>
+        </div>
+        <small class="text-body-secondary">Maximum file size: 5MB. Supported formats: JPEG, PNG, GIF, WebP.</small>
     </div>
+
     <hr>
     <!-- Password Reset Section (Placeholder) -->
     <div class="mb-4">
@@ -123,6 +133,98 @@
         document.getElementById('username').value = user.username;
         document.getElementById('email').value = user.email;
     }
+
+    // Image Preview Handler
+    const pictureInput = document.getElementById('pictureInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const uploadBtn = document.getElementById('uploadPictureBtn');
+
+    pictureInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+
+            uploadBtn.disabled = false;
+        } else {
+            imagePreview.classList.add('d-none');
+            uploadBtn.disabled = true;
+        }
+    });
+
+    // Upload Profile Picture Handler
+    uploadBtn.addEventListener('click', async () => {
+        const token = getToken();
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const file = pictureInput.files[0];
+        if (!file) {
+            return;
+        }
+
+        // Use FormData for file uploads (not JSON)
+        const formData = new FormData();
+        formData.append('file', file);
+
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Uploading...';
+
+        try {
+            const response = await fetch(`/api/users/${currentUserId}/picture`, {
+                method: 'PATCH',
+                headers: {
+                    // Don't set Content-Type — browser sets multipart boundary automatically
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            });
+
+            if (response.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+
+            if (response.status === 403) {
+                document.getElementById('errorMessage').textContent =
+                    'You are not authorized to update this profile picture.';
+                showModal('errorModal');
+                return;
+            }
+
+            if (response.ok) {
+                const data = await response.json();
+
+                clearUserCache();
+
+                document.getElementById('profileImage').src = data.image_path;
+
+                pictureInput.value = '';
+                imagePreview.classList.add('d-none');
+
+                document.getElementById('successMessage').textContent =
+                    'Profile picture updated successfully!';
+                showModal('successModal');
+            } else {
+                const error = await response.json();
+                document.getElementById('errorMessage').textContent = getErrorMessage(error);
+                showModal('errorModal');
+            }
+        } catch (error) {
+            document.getElementById('errorMessage').textContent =
+                'Network error. Please check your connection and try again.';
+            showModal('errorModal');
+        } finally {
+            uploadBtn.disabled = pictureInput.files.length === 0;
+            uploadBtn.textContent = 'Upload';
+        }
+    });
 
     // Update Profile Form Handler
     const updateForm = document.getElementById('updateProfileForm');
