@@ -1,21 +1,110 @@
 {% extends "layout.html" %}
 {% block content %}
-{% for post in posts %}
-<article class="content-section py-3 px-4 mb-4">
-  <div class="d-flex align-items-start gap-4">
-    <img class="rounded-circle article-img flex-shrink-0" src="{{ post.author.image_path }}"
-      alt="{{ post.author.username }}'s profile picture" width="64" height="64" loading="lazy">
-    <div class="flex-grow-1">
-      <div class="article-metadata mb-2">
-        <a class="me-2" href="{{ url_for('user_posts', user_id=post.author.id) }}">{{ post.author.username }}</a>
-        <small class="text-body-secondary">{{ post.date_posted.strftime("%B %d, %Y") }}</small>
+<div id="postsContainer"> {% for post in posts %} <article class="content-section py-3 px-4 mb-4">
+    <div class="d-flex align-items-start gap-4">
+      <img class="rounded-circle article-img flex-shrink-0" src="{{ post.author.image_path }}"
+        alt="{{ post.author.username }}'s profile picture" width="64" height="64" loading="lazy">
+      <div class="flex-grow-1">
+        <div class="article-metadata mb-2">
+          <a class="me-2" href="{{ url_for('user_posts', user_id=post.author.id) }}">{{ post.author.username }}</a>
+          <small class="text-body-secondary">{{ post.date_posted.strftime("%B %d, %Y") }}</small>
+        </div>
+        <h2>
+          <a class="article-title" href="{{ url_for('post_page', post_id=post.id) }}">{{ post.title }}</a>
+        </h2>
+        <p class="article-content">{{ post.content }}</p>
       </div>
-      <h2>
-        <a class="article-title" href="{{ url_for('post_page', post_id=post.id) }}">{{ post.title }}</a>
-      </h2>
-      <p class="article-content">{{ post.content }}</p>
     </div>
-  </div>
-</article>
-{% endfor %}
+  </article>
+  {% endfor %}
+</div>
+{% if has_more %}
+<div class="text-center mb-4">
+  <button type="button" class="btn btn-outline-primary" id="loadMoreBtn">Load More Posts</button>
+</div>
+{% endif %}
 {% endblock content %}
+{% block scripts %}
+<script type="module">
+  import { escapeHtml, formatDate } from '/static/js/utils.js';
+
+  // Pagination state - initialized from server-rendered values
+  let currentOffset = Number("{{ limit }}");
+  const limit = Number("{{ limit }}");
+  let hasMore = "{{ has_more }}" === "True";
+
+  const postsContainer = document.getElementById('postsContainer');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+  // Create HTML for a single post (matching server-rendered structure)
+  function createPostHTML(post) {
+    return `
+      <article class="content-section py-3 px-4 mb-4">
+        <div class="d-flex align-items-start gap-4">
+          <img class="rounded-circle article-img flex-shrink-0" src="${escapeHtml(post.author.image_path)}" alt="${escapeHtml(post.author.username)}'s profile picture" width="64" height="64" loading="lazy">
+          <div class="flex-grow-1">
+            <div class="article-metadata mb-2">
+              <a class="me-2" href="/users/${post.author.id}/posts">${escapeHtml(post.author.username)}</a>
+              <small class="text-body-secondary">${formatDate(post.date_posted)}</small>
+            </div>
+            <h2>
+              <a class="article-title" href="/posts/${post.id}">${escapeHtml(post.title)}</a>
+            </h2>
+            <p class="article-content">${escapeHtml(post.content)}</p>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  // Load more posts from the API
+  async function loadMorePosts() {
+    // Disable button and show loading state
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'Loading...';
+
+    let errorOccurred = false;
+
+    try {
+      const response = await fetch(`/api/posts?skip=${currentOffset}&limit=${limit}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts');
+      }
+
+      const data = await response.json();
+
+      // Append new posts to the container
+      for (const post of data.posts) {
+        postsContainer.insertAdjacentHTML('beforeend', createPostHTML(post));
+      }
+
+      // Update pagination state
+      currentOffset += data.posts.length;
+      hasMore = data.has_more;
+
+      // Hide button if no more posts
+      if (!hasMore) {
+        loadMoreBtn.classList.add('d-none');
+      }
+    } catch (error) {
+      errorOccurred = true;
+      console.error('Error loading posts:', error);
+      // Show error message and keep button enabled for retry
+      loadMoreBtn.textContent = 'Error - Click to Retry';
+      loadMoreBtn.disabled = false;
+    } finally {
+      // Re-enable button and reset text only if no error occurred
+      if (!errorOccurred && hasMore) {
+        loadMoreBtn.disabled = false;
+        loadMoreBtn.textContent = 'Load More Posts';
+      }
+    }
+  }
+
+  // Add click handler if button exists
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', loadMorePosts);
+  }
+</script>
+{% endblock scripts %}
