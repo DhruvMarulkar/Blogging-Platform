@@ -13,9 +13,14 @@
         </div>
         <button type="submit" class="btn btn-primary">Login</button>
     </form>
-    <p class="mt-3">
-        Don't have an account? <a href="{{ url_for('register_page') }}">Register here</a>
-    </p>
+    <div class="mt-3">
+        <p class="mb-2">
+            <a href="{{ url_for('forgot_password_page') }}">Forgot your password?</a>
+        </p>
+        <p class="mb-0">
+            Don't have an account? <a href="{{ url_for('register_page') }}">Register here</a>
+        </p>
+    </div>
 </div>
 {% endblock content %}
 {% block scripts %}

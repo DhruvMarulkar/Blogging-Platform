@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "aiosmtplib>=5.1.2",
     "aiosqlite>=0.22.1",
     "fastapi[standard]>=0.135.1",
     "greenlet>=3.3.2",
