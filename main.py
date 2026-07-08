@@ -15,15 +15,14 @@ from sqlalchemy.orm import selectinload
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from config import settings
 import models
-from database import base, engine, get_db
+from database import  engine, get_db
 from routers import posts, users
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Start
-    async with engine.begin() as conn:
-        await conn.run_sync(base.metadata.create_all)
+
+
     yield
     # Shut
     await engine.dispose()
