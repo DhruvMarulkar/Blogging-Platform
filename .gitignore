@@ -227,3 +227,25 @@ pyrightconfig.json
 # Ignore all local history of files
 .history
 .ionide
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Uploaded media
+media/profile_pics/*
+!media/profile_pics/.gitkeep
+
+# uv
+.python-version
+
+# Docker
+docker-compose.override.yml
+
+# Local secrets
+.env.local
+.env.production
+.env.development
+
+# AWS
+.aws/
+*.pem
