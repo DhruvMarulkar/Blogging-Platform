@@ -5,7 +5,7 @@ A production-ready blogging platform built with **FastAPI**, featuring JWT authe
 ---
 ## 🌐 Live Demo
 
->**http://13.235.17.185:8080/**
+>**http://bloggingplatform.duckdns.org:8080/**
 
 ---
 ## ✨ Features
